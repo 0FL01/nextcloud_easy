@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:17-alpine3.22
+    container_name: nextcloud-db
+    restart: always
+    volumes:
+      - nextcloud-db:/var/lib/postgresql/data:Z
+    env_file:
+      - db.env
+
+  redis:
+    image: redis:8-alpine3.22
+    container_name: nextcloud-redis
+    restart: always
+
+  app:
+    image: nextcloud:production-apache
+    container_name: nextcloud-app
+    restart: always
+    volumes:
+      - nextcloud-data:/var/www/html:z
+      # NOTE: The `volumes` config of the `cron` and `app` containers must match
+    ports:
+      - 127.0.0.1:84:80
+    environment:
+      - POSTGRES_HOST=db
+      - REDIS_HOST=redis
+    env_file:
+      - db.env
+    depends_on:
+      - db
+      - redis
+
+  cron:
+    image: nextcloud:production-apache
+    container_name: nextcloud-cron
+    restart: always
+    volumes:
+      - nextcloud-data:/var/www/html:z
+      # NOTE: The `volumes` config of the `cron` and `app` containers must match
+    entrypoint: /cron.sh
+    depends_on:
+      - db
+      - redis
+
+
+volumes:
+  nextcloud-db:
+  nextcloud-data:
+
